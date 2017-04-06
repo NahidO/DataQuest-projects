@@ -1,0 +1,161 @@
+
+# coding: utf-8
+
+# # Preparing structured data for SQLite : Oscars ceremonies
+
+# In[24]:
+
+import pandas as pd
+
+
+# In[25]:
+
+#Read csv
+academy_awards = pd.read_csv('academy_awards.csv', encoding = "ISO-8859-1")
+
+
+# In[26]:
+
+#Print the first rows
+academy_awards.head()
+
+
+# In[27]:
+
+awards = academy_awards
+
+
+# In[28]:
+
+awards["Unnamed: 5"].value_counts()
+
+
+# In[29]:
+
+awards["Unnamed: 6"].value_counts()
+
+
+# In[30]:
+
+awards["Unnamed: 7"].value_counts()
+
+
+# In[31]:
+
+awards["Unnamed: 8"].value_counts()
+
+
+# In[32]:
+
+#Get the year of the ceremony only for each row
+awards["Year"] = awards["Year"].str[0:4]
+
+
+# In[33]:
+
+#Convert the year to integers
+awards["Year"] = awards["Year"].astype(int)
+
+
+# In[34]:
+
+#Focus on post-2000 ceremonies
+later_than_2000 = awards[awards["Year"] > 2000]
+
+
+# In[35]:
+
+#Focus on the award categories listed in award_categories
+award_categories = ["Actor -- Leading Role", "Actor -- Supporting Role", "Actress -- Leading Role", "Actress -- Supporting Role"]
+nominations = later_than_2000[later_than_2000["Category"].isin(award_categories)]
+
+
+# In[36]:
+
+#SQL does not handle text data very good. Thus, we want to convert "YES" or "NO" values to 0 or 1.
+replace_dict = {"YES": 1, "NO": 0}
+nominations["Won?"] = nominations["Won?"].map(replace_dict)
+
+
+# In[37]:
+
+#Convert the "WON?" column to "WON" for better reading
+nominations["Won"] = nominations["Won?"]
+
+
+# In[38]:
+
+#Drop all the columns listed below
+
+liste = ["Won?", 
+"Unnamed: 5",
+"Unnamed: 6",
+"Unnamed: 7",
+"Unnamed: 8",
+"Unnamed: 9",
+"Unnamed: 10"]
+
+final_nominations = nominations.drop(liste, axis=1)
+
+
+# In[39]:
+
+#Additionnal info contains the name of the movie and the name of the character in brackets. We want to separate these
+#informations in two separate columns
+
+final_nominations["additional_info_one"] = final_nominations["Additional Info"].str.rstrip("}")
+final_nominations["additional_info_two"] = final_nominations["additional_info_one"].str.split(" {")
+final_nominations["movies_name"] = final_nominations["additional_info_two"].str[0]
+final_nominations["character"] = final_nominations["additional_info_two"].str[1]
+
+
+# In[40]:
+
+#Dropper additionnal info columns
+
+final_nominations = final_nominations.drop(["additional_info_one", "additional_info_two", "Additional Info"], axis=1)
+
+
+# In[41]:
+
+#The movie's characters are in brackets. We use pandas' string method to replace brackets by blank spaces.
+
+final_nominations["character"] = final_nominations["character"].str.replace("'", "")
+
+
+# In[42]:
+
+import sqlite3 #import sqlite
+conn = sqlite3.connect("nominations.db") #Create a connexion instance "conn" that is connected to our database
+#nominations
+
+
+# In[43]:
+
+#Create a nominations table from the final_nominations dataframe using our connexion to database.
+final_nominations.to_sql("nominations", conn, index=False)
+
+
+# In[44]:
+
+#To verify our table was succesfully created, we print the table infos.
+
+query = "pragma table_info(nominations)"
+conn.execute(query).fetchall()
+
+
+# In[45]:
+
+#AND we print the first 10 rows
+
+query = '''SELECT* FROM nominations
+LIMIT 10;'''
+result = conn.execute(query).fetchall()
+
+
+# In[46]:
+
+#Close the connexion to the database.
+
+conn.close()
+
