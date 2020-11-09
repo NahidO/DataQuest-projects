@@ -1,3 +1,3 @@
-# DataQuest-projects
+# data-projects
 
-All my Dataquest projects & challenges so far in the form of Jupyter notebooks.
+All my data projects & challenges so far (data analysis, Kaggle challenges, trainings, courses, etc...) in the form of Jupyter notebooks.
